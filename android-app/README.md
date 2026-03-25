@@ -1,6 +1,6 @@
-# Grocery App Android Project
+# Fresh Grocery Android App
 
-A complete, production-ready Android grocery delivery app for a single shop. Built with Kotlin, Jetpack Compose, and Firebase.
+A complete, production-ready Android grocery delivery app for a single shop. Converted to **Java** with XML layouts for maximum compatibility.
 
 ## Features
 - **Browse Products:** View categories, search items, and see detailed product info.
@@ -8,16 +8,15 @@ A complete, production-ready Android grocery delivery app for a single shop. Bui
 - **Distance-Based Delivery:** Automatically calculates delivery charge based on the distance from the shop (max 50km).
 - **Cash on Delivery (COD):** Only COD is supported.
 - **One-Time Address:** Saves user details locally and in Firestore for future orders.
-- **Admin Module:** Shop owner can view orders, accept/reject, and mark as delivered.
 - **Push Notifications:** Firebase Cloud Messaging integration for order alerts.
 
 ## Tech Stack
-- **Language:** Kotlin
-- **UI Toolkit:** Jetpack Compose
+- **Language:** Java
+- **UI Toolkit:** XML Layouts (Material3)
 - **Architecture:** MVVM (Model-View-ViewModel)
 - **Backend:** Firebase Firestore
-- **Image Loading:** Coil
-- **Navigation:** Jetpack Navigation Compose
+- **Image Loading:** Glide
+- **Navigation:** Jetpack Navigation Component
 
 ## Setup Instructions
 
@@ -44,13 +43,9 @@ A complete, production-ready Android grocery delivery app for a single shop. Bui
    - `users`: Will be populated automatically when users check out.
 
 ### 4. Configure Shop Location
-1. Open `app/src/main/java/com/grocery/app/utils/DeliveryUtils.kt`.
+1. Open `app/src/main/java/com/grocery/app/utils/DeliveryUtils.java`.
 2. Update `SHOP_LAT` and `SHOP_LNG` with the actual coordinates of the grocery shop.
 
 ### 5. Run the App
 1. Connect an Android device or start an emulator.
 2. Click the **Run** button in Android Studio.
-
-## Email Notifications (Optional)
-To send email notifications to the shop owner when an order is placed, you can use a Firebase Cloud Function.
-Create a Cloud Function triggered by Firestore `onCreate` on the `orders` collection that uses Nodemailer or SendGrid to send an email.
