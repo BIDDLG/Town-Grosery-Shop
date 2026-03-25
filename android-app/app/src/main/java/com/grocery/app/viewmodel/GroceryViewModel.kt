@@ -86,7 +86,7 @@ class GroceryViewModel(application: Application) : AndroidViewModel(application)
         _deliveryCharge.value = DeliveryUtils.getDeliveryCharge(dist)
     }
 
-    fun placeOrder(name: String, phone: String, address: String, landmark: String, note: String) {
+    fun placeOrder(name: String, phone: String, address: String, landmark: String, note: String, lat: Double, lng: Double) {
         viewModelScope.launch {
             _isLoading.value = true
             
@@ -95,7 +95,9 @@ class GroceryViewModel(application: Application) : AndroidViewModel(application)
                 name = name,
                 phone = phone,
                 address = address,
-                landmark = landmark
+                landmark = landmark,
+                latitude = lat,
+                longitude = lng
             )
             
             repository.saveUserDetails(currentUser)
@@ -121,6 +123,8 @@ class GroceryViewModel(application: Application) : AndroidViewModel(application)
                 address = address,
                 landmark = landmark,
                 note = note,
+                latitude = lat,
+                longitude = lng,
                 items = orderItems,
                 subtotal = subtotal,
                 deliveryCharge = _deliveryCharge.value,

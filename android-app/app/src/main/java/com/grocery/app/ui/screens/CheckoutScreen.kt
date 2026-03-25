@@ -1,5 +1,11 @@
 package com.grocery.app.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.os.Looper
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,21 +14,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.google.android.gms.location.*
 import com.grocery.app.viewmodel.GroceryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = viewModel()) {
+    val context = LocalContext.current
     val user by viewModel.user.collectAsState()
     val deliveryCharge by viewModel.deliveryCharge.collectAsState()
     val distance by viewModel.distance.collectAsState()
@@ -34,13 +45,60 @@ fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = v
     var address by remember { mutableStateOf(user?.address ?: "") }
     var landmark by remember { mutableStateOf(user?.landmark ?: "") }
     var note by remember { mutableStateOf("") }
+    
+    var customerLat by remember { mutableStateOf(user?.latitude ?: 0.0) }
+    var customerLng by remember { mutableStateOf(user?.longitude ?: 0.0) }
+    var isFetchingLocation by remember { mutableStateOf(false) }
+    var locationError by remember { mutableStateOf<String?>(null) }
 
-    // Mock coordinates for demo purposes (In a real app, use Google Places API or GPS)
-    // We will simulate a distance calculation when address is entered
-    LaunchedEffect(address) {
-        if (address.length > 5) {
-            // Mocking a customer location
-            viewModel.calculateDeliveryCharge(28.7100, 77.1100)
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // Initial calculation if we already have saved coordinates
+    LaunchedEffect(customerLat, customerLng) {
+        if (customerLat != 0.0 && customerLng != 0.0) {
+            viewModel.calculateDeliveryCharge(customerLat, customerLng)
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        
+        if (fineLocationGranted || coarseLocationGranted) {
+            fetchLocation(fusedLocationClient) { lat, lng ->
+                customerLat = lat
+                customerLng = lng
+                isFetchingLocation = false
+                locationError = null
+            }
+        } else {
+            isFetchingLocation = false
+            locationError = "Location permission denied. Cannot calculate delivery charge."
+        }
+    }
+
+    fun requestLocation() {
+        isFetchingLocation = true
+        locationError = null
+        
+        val hasFineLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        
+        if (hasFineLocation || hasCoarseLocation) {
+            fetchLocation(fusedLocationClient) { lat, lng ->
+                customerLat = lat
+                customerLng = lng
+                isFetchingLocation = false
+            }
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -79,14 +137,14 @@ fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = v
                     }
                     Button(
                         onClick = {
-                            viewModel.placeOrder(name, phone, address, landmark, note)
+                            viewModel.placeOrder(name, phone, address, landmark, note, customerLat, customerLng)
                         },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 16.dp)
                             .height(50.dp),
-                        enabled = name.isNotBlank() && phone.isNotBlank() && address.isNotBlank() && deliveryCharge >= 0 && !isLoading
+                        enabled = name.isNotBlank() && phone.isNotBlank() && address.isNotBlank() && deliveryCharge >= 0 && !isLoading && customerLat != 0.0
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -154,6 +212,31 @@ fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = v
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Button(
+                        onClick = { requestLocation() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (isFetchingLocation) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Detecting Location...")
+                        } else {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (customerLat == 0.0) "Detect My Location" else "Update Location")
+                        }
+                    }
+                    
+                    if (locationError != null) {
+                        Text(locationError!!, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    } else if (customerLat != 0.0) {
+                        Text("Location captured successfully ✓", color = Color(0xFF4CAF50), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    }
                 }
             }
 
@@ -174,7 +257,9 @@ fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = v
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Delivery Charge", color = Color.Gray)
-                        if (deliveryCharge < 0) {
+                        if (customerLat == 0.0) {
+                            Text("Detect location first", color = Color.Gray, fontSize = 12.sp)
+                        } else if (deliveryCharge < 0) {
                             Text("Not Serviceable", color = Color.Red, fontWeight = FontWeight.Bold)
                         } else {
                             Text("₹$deliveryCharge", fontWeight = FontWeight.Bold)
@@ -213,6 +298,30 @@ fun CheckoutScreen(navController: NavController, viewModel: GroceryViewModel = v
             }
             
             Spacer(modifier = Modifier.height(100.dp))
+        }
+    }
+}
+
+@SuppressLint("MissingPermission")
+private fun fetchLocation(
+    fusedLocationClient: FusedLocationProviderClient,
+    onLocationFetched: (Double, Double) -> Unit
+) {
+    fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+        if (location != null) {
+            onLocationFetched(location.latitude, location.longitude)
+        } else {
+            // Fallback to request new location if last location is null
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000).build()
+            val locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    locationResult.lastLocation?.let {
+                        onLocationFetched(it.latitude, it.longitude)
+                        fusedLocationClient.removeLocationUpdates(this)
+                    }
+                }
+            }
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         }
     }
 }

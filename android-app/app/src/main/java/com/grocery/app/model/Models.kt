@@ -28,7 +28,9 @@ data class User(
     val name: String = "",
     val phone: String = "",
     val address: String = "",
-    val landmark: String = ""
+    val landmark: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0
 )
 
 data class Order(
@@ -39,6 +41,8 @@ data class Order(
     val address: String = "",
     val landmark: String = "",
     val note: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val items: List<OrderItem> = emptyList(),
     val subtotal: Double = 0.0,
     val deliveryCharge: Double = 0.0,

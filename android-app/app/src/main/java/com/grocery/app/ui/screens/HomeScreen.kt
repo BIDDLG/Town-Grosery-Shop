@@ -43,6 +43,9 @@ fun HomeScreen(navController: NavController, viewModel: GroceryViewModel = viewM
             TopAppBar(
                 title = { Text("Fresh Grocery", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(onClick = { navController.navigate("admin") }) {
+                        Icon(androidx.compose.material.icons.filled.Settings, contentDescription = "Admin")
+                    }
                     IconButton(onClick = { navController.navigate("cart") }) {
                         BadgedBox(
                             badge = {

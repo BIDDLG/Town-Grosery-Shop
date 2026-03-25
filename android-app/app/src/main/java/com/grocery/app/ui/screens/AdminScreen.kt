@@ -142,6 +142,9 @@ fun AdminOrderCard(order: Order, onUpdateStatus: (String) -> Unit) {
                 Text(order.phone, color = Color.Gray, fontSize = 14.sp)
             }
             Text(order.address, color = Color.DarkGray, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            if (order.latitude != 0.0) {
+                Text("GPS: ${order.latitude}, ${order.longitude}", color = Color.Blue, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            }
             
             Divider(modifier = Modifier.padding(vertical = 12.dp))
             

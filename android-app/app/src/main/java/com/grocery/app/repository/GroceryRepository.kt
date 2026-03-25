@@ -52,6 +52,8 @@ class GroceryRepository(private val context: Context) {
                 putString("phone", user.phone)
                 putString("address", user.address)
                 putString("landmark", user.landmark)
+                putString("latitude", user.latitude.toString())
+                putString("longitude", user.longitude.toString())
                 apply()
             }
             // Also save to Firestore if user ID exists
@@ -73,7 +75,9 @@ class GroceryRepository(private val context: Context) {
             name = name,
             phone = prefs.getString("phone", "") ?: "",
             address = prefs.getString("address", "") ?: "",
-            landmark = prefs.getString("landmark", "") ?: ""
+            landmark = prefs.getString("landmark", "") ?: "",
+            latitude = prefs.getString("latitude", "0.0")?.toDoubleOrNull() ?: 0.0,
+            longitude = prefs.getString("longitude", "0.0")?.toDoubleOrNull() ?: 0.0
         )
     }
     
